@@ -1,0 +1,16 @@
+# PlatformIO
+.pio/
+*.bin
+*.elf
+
+# Gradle & Android
+.gradle/
+build/
+app/build/
+*.iml
+.idea/
+.vscode/
+local.properties
+captures/
+.externalNativeBuild/
+.cxx/

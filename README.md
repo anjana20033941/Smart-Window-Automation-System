@@ -1,89 +1,84 @@
-# 🪟 Smart Window Automation System
+# 🪟 Project Iris — Smart Window Automation System
 
-An ESP32-based IoT system that automatically opens and closes windows based on outside/inside temperature, light levels, and rain detection — with a built-in Wi-Fi web dashboard for manual override.
+[![Platform](https://img.shields.io/badge/Platform-ESP32-blue.svg)](https://espressif.com)
+[![Framework](https://img.shields.io/badge/Framework-Arduino%20%2F%20PlatformIO-orange.svg)](https://platformio.org)
+[![Android](https://img.shields.io/badge/Android-Jetpack%20Compose-green.svg)](https://developer.android.com/jetpack/compose)
+[![MQTT](https://img.shields.io/badge/MQTT-HiveMQ%20Cloud-yellow.svg)](https://www.hivemq.com)
+[![License](https://img.shields.io/badge/License-MIT-purple.svg)](LICENSE)
 
-## 📋 Overview
+An intelligent, cloud-connected, dual-mode Smart Window Automation System engineered with **ESP32**, **HiveMQ MQTT**, and a modern **Android (Jetpack Compose)** mobile companion application (**Iris**).
 
-This project uses an ESP32 microcontroller to monitor environmental conditions and control two servo-driven windows automatically. It switches between **AUTO** mode (sensor-driven decisions) and **MANUAL** mode (control via web dashboard), toggled by a physical push button. A password-protected local web dashboard displays live sensor readings and lets you manually open/close the windows.
+---
 
-## ⚙️ Features
+## 📲 Download Iris Mobile App
 
-- 🌡️ Dual temperature sensing (outside + inside) using DHT11 sensors
-- ☀️ Dual light sensing (outside + inside) using LDR modules
-- 🌧️ Rain detection with automatic window closing
-- 🔁 Auto / Manual mode toggle via physical switch
-- 📶 Built-in Wi-Fi Access Point with live web dashboard
-- 🔒 PIN-protected manual controls (OPEN / CLOSE / MODE TOGGLE)
-- 🔧 Dual servo motor control (synchronized, 0°–180°)
+You can download and install the latest **Iris.apk** directly to your Android device by scanning the QR code below or clicking the direct download button:
 
-## 🧠 Automation Logic (Priority Order)
+<div align="center">
+  <img src="assets/Iris_App_Download_QR.png" alt="Iris App Download QR Code" width="260"/>
+  <br/>
+  <br/>
+  <a href="https://github.com/anjana20033941/Smart-Window-Automation-System/raw/main/apk/Iris.apk">
+    <img src="https://img.shields.io/badge/Direct%20Download-Iris.apk%20(15.8%20MB)-0284C7?style=for-the-badge&logo=android&logoColor=white" alt="Download APK" />
+  </a>
+</div>
 
-| Priority | Condition | Action |
-|---|---|---|
-| 1 | Night (outside dark) | Close |
-| 2 | Rain detected | Close |
-| 3 | Outside temp > Inside temp | Close |
-| 4 | Inside temp > Outside temp | Open |
-| 5 | Daytime & inside dark | Open |
-| 6 | Default (normal day) | Open |
+> **Quick Install Instructions:**
+> 1. Scan the QR code above with your mobile phone camera or click the **Direct Download** button.
+> 2. Open the downloaded `Iris.apk` file on your Android phone and tap **Install**.
+> 3. Grant Notification permissions when prompted to receive real-time alerts.
 
-## 🔌 Wiring / Pin Configuration
+---
 
-| Component | Pin | ESP32 GPIO |
-|---|---|---|
-| Outside DHT11 (Temperature) | Data | GPIO 27 |
-| Inside DHT11 (Temperature) | Data | GPIO 26 |
-| Outside LDR Module | AO | GPIO 32 |
-| Inside LDR Module | AO | GPIO 33 |
-| Rain Sensor Module | AO | GPIO 36 (labeled "SP"/"VP" on some boards) |
-| Servo Motor 1 | Signal | GPIO 18 |
-| Servo Motor 2 | Signal | GPIO 19 |
-| Mode Switch | Signal | GPIO 25 (INPUT_PULLUP) |
+## ✨ Key Features
 
-All sensor VCC pins → 3V3, all GND pins → GND. Servos recommended on a separate 5V supply for stable power.
+- **🌧️ High-Sensitivity Rain Protection:** Rain sensor (< 3400 threshold) with a 3.5-second verification debounce automatically closes windows to protect interior spaces.
+- **🌡️ Automated Temperature Differential Ventilation:** Monitors inside and outside temperatures. If inside is hotter by ≥ 3.5°C during daytime, windows open automatically for natural breeze and ventilation.
+- **🌙 Real-Time Clock & Night Lock:** Automatically prevents auto-opening during night hours (18:00 – 06:00).
+- **🛡️ Wi-Fi Disconnect & Power Cut Safety Lock:** If Wi-Fi connection is lost for > 15s, or when power is restored after a blackout, windows safely close and lock into **System OFF** mode until the user explicitly turns them back ON.
+- **🔘 Physical Manual Window Switch (GPIO 25):** Hardware push button / toggle switch directly opens or closes the window, instantly switching mode to `MANUAL` and updating the Cloud app.
+- **🔔 Android Push Notifications:** Native system notifications for rain detection, Wi-Fi/power disconnect, window state transitions, and temperature alerts, fully customizable with toggles in Settings.
+- **🔐 Master PIN Security:** 4-digit master security PIN required for window actuation and mode switching, easily configurable from the app.
+- **⚡ Dual Connectivity:** Works via direct **Local Wi-Fi (192.168.4.1)** and over global internet via **HiveMQ Cloud MQTT**.
 
-## 🛠️ Hardware Required
+---
 
-- ESP32 Dev Board
-- 2× DHT11 Temperature Sensors
-- 2× LDR Light Sensor Modules
-- 1× Rain Sensor Module
-- 2× Servo Motors (SG90 or similar)
-- 1× Push Button / Switch
-- Jumper wires, breadboard
+## 🔌 Hardware Pinout & Wiring
 
-## 💻 Software / Libraries
+| Component | Pin / Signal | ESP32 GPIO | Description |
+|---|---|---|---|
+| **Outside DHT11** | DATA | `GPIO 27` | Outside Environment Temp & Humidity |
+| **Inside DHT11** | DATA | `GPIO 26` | Living Room Temp & Humidity |
+| **Outside LDR** | Analog A0 | `GPIO 32` (ADC1) | Ambient Daylight Detection |
+| **Inside LDR** | Analog A0 | `GPIO 33` (ADC1) | Indoor Lighting Detection |
+| **Rain Sensor** | Analog A0 | `GPIO 36` / VP (ADC1) | Rain Drops Moisture Detection |
+| **Window Servo 1** | PWM Signal | `GPIO 18` | Window Axis 1 (0° Closed, 180° Open) |
+| **Window Servo 2** | PWM Signal | `GPIO 19` | Window Axis 2 (0° Closed, 180° Open) |
+| **Manual Switch** | Signal | `GPIO 25` | Connect between GPIO 25 and GND |
 
-Built with **PlatformIO** (Arduino framework):
+---
 
-```ini
-[env:esp32dev]
-platform = espressif32
-board = esp32dev
-framework = arduino
-monitor_speed = 115200
+## 📁 Repository Structure
 
-lib_deps =
-    madhephaestus/ESP32Servo @ ^3.0.5
-    adafruit/DHT sensor library @ ^1.4.7
-    adafruit/Adafruit Unified Sensor @ ^1.1.14
+```
+Smart-Window-Automation-System/
+├── firmware/                  # ESP32 PlatformIO Source Code
+│   ├── src/main.cpp           # Complete firmware logic, sensors, MQTT, WebServer
+│   └── platformio.ini         # PlatformIO build configuration
+├── android_app/               # Android Native App (Jetpack Compose)
+│   ├── app/src/main/          # Kotlin UI screens, ViewModel, MQTT, Notifications
+│   └── build.gradle.kts       # Android Gradle build scripts
+├── apk/                       # Pre-compiled Android Application Package
+│   └── Iris.apk               # Ready-to-install Android APK
+├── assets/                    # Project Media, Logo & QR Code
+│   ├── Iris_App_Download_QR.png
+│   └── app_logo.png
+└── README.md                  # Project documentation & guides
 ```
 
-## 🚀 Setup & Usage
+---
 
-1. Wire the components as per the table above.
-2. Open the project in PlatformIO (VS Code extension).
-3. Upload the code to the ESP32.
-4. On boot, the ESP32 creates a Wi-Fi Access Point named **`SMART_WINDOW`** (password: `password123`).
-5. Connect to it and visit `192.168.4.1` in a browser to view the dashboard.
-6. Use the physical switch to toggle between AUTO and MANUAL mode.
-7. In MANUAL mode, use the dashboard (PIN: `2580`) to control the windows directly.
+## 👨‍💻 Author
 
-## 📷 Demo / Screenshots
-
-*(Add photos or a short video of your working setup here)*
-
-## 🎓 Project Info
-
-Built as an IoT / embedded systems mini-project demonstrating sensor fusion, automated decision logic, and an embedded web server on ESP32.
-
+Developed for **Smart Window Automation System**  
+GitHub: [@anjana20033941](https://github.com/anjana20033941)

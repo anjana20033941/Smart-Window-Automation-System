@@ -87,6 +87,3 @@ lib_deps =
 
 Built as an IoT / embedded systems mini-project demonstrating sensor fusion, automated decision logic, and an embedded web server on ESP32.
 
-## 📄 License
-
-*(Add a license if you'd like, e.g. MIT)*

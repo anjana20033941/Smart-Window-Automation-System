@@ -614,9 +614,9 @@ void loop() {
         cacheIsOutsideDark = (cacheOutsideLDR > LDR_DARK_THRESHOLD);
         cacheIsInsideDark  = (cacheInsideLDR > LDR_DARK_THRESHOLD);
 
-        // Night Check: Clock-controlled (past 18:00 or before 6:00) OR Outside LDR is Dark
+        // Clock-controlled Night check: past 18:00 or before 6:00 is Night Time
         bool isNightTime = (clockHour >= 18 || clockHour < 6);
-        cacheIsNight = isNightTime || cacheIsOutsideDark;
+        cacheIsNight = isNightTime; // STRICT: Night mode only during actual night hours (18:00 - 06:00)
 
         // Automation Evaluation (only if system is enabled)
         if (!isSystemEnabled) {
@@ -629,12 +629,14 @@ void loop() {
             if (cacheIsRaining) {
                 targetState = STATE_CLOSED;
                 reason = "Rain Detected! Protecting interior";
-            } else if (cacheIsOutsideDark) {
-                targetState = STATE_CLOSED;
-                reason = "Dark Outside (LDR Dark) - Window Closed";
             } else if (isNightTime) {
                 targetState = STATE_CLOSED;
                 reason = "Night time (past 18:00) - Window Closed";
+            } else if (cacheIsOutsideDark) {
+                // Daytime but LDR detected darkness (clouds/shadow/covered)
+                // Compare with time: It is DAY, so normal window close only, NO night mode!
+                targetState = STATE_CLOSED;
+                reason = "Daytime Dark (Clouds/Shadow) - Window Closed";
             } else if (!outFail && !inFail && (cacheOutsideTemp - cacheInsideTemp >= TEMP_DIFF_THRESHOLD)) {
                 targetState = STATE_CLOSED;
                 reason = "Outside is hotter (>= 3.5 C) - Keeping heat out";

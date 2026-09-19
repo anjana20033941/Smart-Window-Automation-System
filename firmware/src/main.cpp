@@ -29,7 +29,7 @@
 const unsigned long CONFIRM_TIME_MS = 3500; // 3.5-second confirmation debounce for all sensors
 
 #define RAIN_THRESHOLD      3400  // < 3400 indicates rain detected (high sensitivity)
-#define LDR_DARK_THRESHOLD  2200  // > 2200 Dark/Night; < 1800 Bright/Day
+#define LDR_DARK_THRESHOLD  1800  // > 1800 Dark/Night; < 1800 Bright/Day / Torch Active
 
 // Calibration Offsets (Outside -9.5C calibration)
 float insideTempOffset  = 0.0;
@@ -357,8 +357,8 @@ void setup() {
     currentWindowAngle = WINDOW_CLOSED_POS;
     isWindowOpen = false;
 
-    // Safety: Power was disconnected / restored -> Start safely CLOSED and in System OFF
-    setSystemState(false);
+    // Always start with System ENABLED so all sensor automation is immediately active
+    setSystemState(true);
 
     // Initialize DHT11 Sensors with Internal Pullup
     pinMode(DHT_OUTSIDE_PIN, INPUT_PULLUP);
@@ -642,8 +642,8 @@ void loop() {
                 targetState = STATE_OPEN;
                 reason = "Inside is hotter (>= 3.5 C) - Ventilating room";
             } else {
-                targetState = STATE_CLOSED;
-                reason = "Normal Temp (Diff < 3.5 C) - Window Closed";
+                targetState = STATE_OPEN;
+                reason = "Daylight / Torch Active - Window Open";
             }
 
             // 3.5-Second Confirmation Debounce Timer
@@ -987,7 +987,7 @@ void loadCredentials() {
     userPIN  = prefs.getString("user_pin", DEFAULT_USER_PIN);
     homeSSID = prefs.getString("home_ssid", "");
     homePass = prefs.getString("home_pass", "");
-    isSystemEnabled = prefs.getBool("sys_enabled", false);
+    isSystemEnabled = prefs.getBool("sys_enabled", true);
     prefs.end();
 }
 

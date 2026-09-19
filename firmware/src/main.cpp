@@ -614,9 +614,9 @@ void loop() {
         cacheIsOutsideDark = (cacheOutsideLDR > LDR_DARK_THRESHOLD);
         cacheIsInsideDark  = (cacheInsideLDR > LDR_DARK_THRESHOLD);
 
-        // Night Check: Clock-controlled (past 18:00 or before 6:00 is Night)
+        // Night Check: Clock-controlled (past 18:00 or before 6:00) OR Outside LDR is Dark
         bool isNightTime = (clockHour >= 18 || clockHour < 6);
-        cacheIsNight = isNightTime;
+        cacheIsNight = isNightTime || cacheIsOutsideDark;
 
         // Automation Evaluation (only if system is enabled)
         if (!isSystemEnabled) {
@@ -626,27 +626,27 @@ void loop() {
             WindowState targetState = isWindowOpen ? STATE_OPEN : STATE_CLOSED;
             String reason = "";
 
-            if (cacheIsNight) {
-                targetState = STATE_CLOSED;
-                reason = "Night time (past 18:00) - Auto Open FORBIDDEN (Use Manual)";
-            } else if (cacheIsRaining) {
+            if (cacheIsRaining) {
                 targetState = STATE_CLOSED;
                 reason = "Rain Detected! Protecting interior";
+            } else if (cacheIsOutsideDark) {
+                targetState = STATE_CLOSED;
+                reason = "Dark Outside (LDR Dark) - Window Closed";
+            } else if (isNightTime) {
+                targetState = STATE_CLOSED;
+                reason = "Night time (past 18:00) - Window Closed";
             } else if (!outFail && !inFail && (cacheOutsideTemp - cacheInsideTemp >= TEMP_DIFF_THRESHOLD)) {
                 targetState = STATE_CLOSED;
                 reason = "Outside is hotter (>= 3.5 C) - Keeping heat out";
             } else if (!outFail && !inFail && (cacheInsideTemp - cacheOutsideTemp >= TEMP_DIFF_THRESHOLD)) {
                 targetState = STATE_OPEN;
                 reason = "Inside is hotter (>= 3.5 C) - Ventilating room";
-            } else if (cacheIsOutsideDark && cacheIsInsideDark) {
-                targetState = STATE_CLOSED;
-                reason = "Daytime Heavy Cloud Cover / Dark Outside";
             } else {
-                targetState = STATE_OPEN;
-                reason = "Normal daytime condition";
+                targetState = STATE_CLOSED;
+                reason = "Normal Temp (Diff < 3.5 C) - Window Closed";
             }
 
-            // 5-Second Debounce Timer
+            // 3.5-Second Confirmation Debounce Timer
             WindowState currentState = isWindowOpen ? STATE_OPEN : STATE_CLOSED;
             if (targetState != currentState) {
                 if (!timerActive || pendingTargetState != targetState) {
@@ -670,6 +670,20 @@ void loop() {
         } else {
             timerActive = false;
             pendingReason = "Manual Control Mode Active";
+        }
+
+        // Periodic Serial Debug Monitor (Every 2 Seconds)
+        static unsigned long lastSerialDebugTime = 0;
+        if (currentMillis - lastSerialDebugTime >= 2000) {
+            lastSerialDebugTime = currentMillis;
+            Serial.printf("[STATUS] OutTemp:%.1f InTemp:%.1f Diff:%.1f | OutLDR:%d (Dark=%d) InLDR:%d | Rain:%d | Win:%s Angle:%d | Mode:%s Sys:%s\n",
+                cacheOutsideTemp, cacheInsideTemp, (cacheInsideTemp - cacheOutsideTemp),
+                cacheOutsideLDR, cacheIsOutsideDark ? 1 : 0, cacheInsideLDR,
+                cacheRain,
+                isWindowOpen ? "OPEN" : "CLOSED", currentWindowAngle,
+                isAutoMode ? "AUTO" : "MANUAL",
+                isSystemEnabled ? "ON" : "OFF"
+            );
         }
 
         // Periodic Cloud Telemetry Publish (every 1 second for fast real-time responsiveness)
@@ -1060,10 +1074,18 @@ void setSystemState(bool enabled) {
 
 // ================= PHYSICAL MANUAL WINDOW SWITCH ====
 void handleManualSwitch() {
-    int reading = digitalRead(MANUAL_SWITCH_PIN);
+    static bool initialized = false;
     static int lastSwitchReading = HIGH;
     static unsigned long lastDebounceTime = 0;
     static int switchState = HIGH;
+
+    int reading = digitalRead(MANUAL_SWITCH_PIN);
+    if (!initialized) {
+        lastSwitchReading = reading;
+        switchState = reading;
+        initialized = true;
+        return;
+    }
 
     if (reading != lastSwitchReading) {
         lastDebounceTime = millis();

@@ -632,17 +632,17 @@ void loop() {
             } else if (isNightTime) {
                 targetState = STATE_CLOSED;
                 reason = "Night time (past 18:00) - Window Closed";
-            } else if (cacheIsOutsideDark) {
-                // Daytime but LDR detected darkness (clouds/shadow/covered)
-                // Compare with time: It is DAY, so normal window close only, NO night mode!
-                targetState = STATE_CLOSED;
-                reason = "Daytime Dark (Clouds/Shadow) - Window Closed";
             } else if (!outFail && !inFail && (cacheOutsideTemp - cacheInsideTemp >= TEMP_DIFF_THRESHOLD)) {
                 targetState = STATE_CLOSED;
                 reason = "Outside is hotter (>= 3.5 C) - Keeping heat out";
             } else if (!outFail && !inFail && (cacheInsideTemp - cacheOutsideTemp >= TEMP_DIFF_THRESHOLD)) {
+                // Inside is hot (>= 3.5 C) during daytime: Open window for ventilation even if dark/cloudy!
                 targetState = STATE_OPEN;
                 reason = "Inside is hotter (>= 3.5 C) - Ventilating room";
+            } else if (cacheIsOutsideDark) {
+                // Daytime but LDR detected darkness (clouds/shadow/covered) and inside is NOT hot
+                targetState = STATE_CLOSED;
+                reason = "Daytime Dark (Clouds/Shadow) - Window Closed";
             } else {
                 targetState = STATE_OPEN;
                 reason = "Daylight / Torch Active - Window Open";
